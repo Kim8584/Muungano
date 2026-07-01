@@ -35,7 +35,7 @@ It enables underserved individuals and MSMEs across emerging markets to prove th
 
 1. **Client-Side Mobile Proving (Absolute Privacy):** Proof generation occurs entirely locally on the user's mobile device. Raw records, identity keys, and ledger transactions never leave the phone. Lenders and gateways only interact with the final succinct proof string.
 2. **Multi-Ledger State Aggregation:** The circuit performs double Poseidon Merkle membership proof climbs concurrently to verify membership in two independent registries (e.g., Mobile Money and Banking) sharing the same `W_identity` witness, verifying:
-   $$S_{\text{total}} = S_{\text{mobile\_money}} + S_{\text{bank}} \ge T_{\text{threshold}}$$
+   $$S_{\text{total}} = S_{\text{mobile money}} + S_{\text{bank}} \ge T_{\text{threshold}}$$
 3. **ZK-HTLC Replay Protection:** Binds the ZK proof directly to the lender's HTLC SHA256 lock condition ($H = \text{SHA256}(S)$) as a public input. This makes the proof single-use, preventing malicious nodes from intercepting and replaying the proof on other payment requests.
 4. **Out-of-Band GNAP Handshake:** Standard ILP STREAM transport enforces a 1500-byte MTU limit. Since ZK proofs exceed this boundary, Muungano shifts proof signaling out-of-band to the Open Payments API layer during the GNAP authorization phase.
 
