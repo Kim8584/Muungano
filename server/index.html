@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muungano V2 Multi-Ledger ZK-ILP Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #030712;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --primary: #6366f1;
+      --secondary: #06b6d4;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: rgba(255, 255, 255, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(6, 116, 212, 0.15) 0%, transparent 40%);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      background-color: rgba(3, 7, 18, 0.5);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+    }
+
+    .logo-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badges {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.success {
+      background-color: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .dot.secondary {
+      background-color: var(--secondary);
+      box-shadow: 0 0 8px var(--secondary);
+      animation: pulse 2s infinite 0.5s;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 1.25rem;
+      border: 1px solid var(--border);
+      padding: 1.75rem;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title span {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .score-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--secondary);
+      min-width: 3.5rem;
+      text-align: right;
+    }
+
+    .aggregate-score-box {
+      background-color: rgba(99, 102, 241, 0.05);
+      border: 1px dashed var(--primary);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      border-radius: 0.75rem;
+      color: white;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn:disabled {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .stat-box {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* HTLC Status Box styling */
+    .htlc-panel {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .htlc-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--warning);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .htlc-data {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      background: #010409;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      word-break: break-all;
+      color: var(--text-muted);
+    }
+
+    .htlc-highlight {
+      color: #fff;
+    }
+
+    /* Terminal logs styling */
+    .terminal-card {
+      grid-row: span 2;
+    }
+
+    .terminal {
+      font-family: 'Space Mono', monospace;
+      background-color: #010409;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.25rem;
+      height: 350px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .term-line {
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .term-time {
+      color: var(--text-muted);
+      margin-right: 0.5rem;
+    }
+
+    .term-info { color: #38bdf8; }
+    .term-success { color: var(--success); }
+    .term-error { color: var(--error); }
+    .term-warning { color: var(--warning); }
+
+    /* SVG tree visualizer */
+    .tree-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+
+    .tree-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+
+    .node {
+      fill: #1f2937;
+      stroke: rgba(255, 255, 255, 0.15);
+      stroke-width: 1.5px;
+      transition: all 0.3s;
+    }
+
+    .node.active {
+      fill: rgba(6, 182, 212, 0.2);
+      stroke: var(--secondary);
+      filter: drop-shadow(0 0 4px var(--secondary));
+    }
+
+    .node.leaf {
+      fill: rgba(99, 102, 241, 0.2);
+      stroke: var(--primary);
+    }
+
+    .node.root {
+      fill: rgba(16, 185, 129, 0.2);
+      stroke: var(--success);
+      stroke-width: 2px;
+    }
+
+    .link {
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-width: 1.5px;
+      transition: stroke 0.3s;
+    }
+
+    .link.active {
+      stroke: var(--secondary);
+      stroke-width: 2px;
+    }
+
+    .node-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 6px;
+      fill: var(--text-muted);
+      text-anchor: middle;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">M</div>
+      <div class="logo-title">Muungano Compliance Gateway</div>
+    </div>
+    <div class="status-badges">
+      <div class="badge">
+        <span class="dot success"></span>
+        Mock Prover: Active
+      </div>
+      <div class="badge">
+        <span class="dot secondary"></span>
+        ILP Gateway: 3000
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Column: Settings and Controls -->
+    <div class="card">
+      <div class="card-title">
+        <span>ZK-ILP Multi-Ledger Simulator</span>
+      </div>
+
+      <div class="form-group">
+        <label for="score1">Mobile Money Credit Score (Witness 1):</label>
+        <div class="slider-container">
+          <input type="range" id="score1" min="150" max="450" value="400">
+          <div class="score-value" id="score1Val">400</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="score2">Bank Credit Score (Witness 2):</label>
+        <div class="slider-container">
+          <input type="range" id="score2" min="150" max="450" value="350">
+          <div class="score-value" id="score2Val">350</div>
+        </div>
+      </div>
+
+      <div class="aggregate-score-box">
+        <span>Aggregate Score (S1 + S2):</span>
+        <span style="font-family: 'Space Mono', monospace; font-size: 1.5rem; color: var(--success);" id="scoreTotal">750</span>
+      </div>
+
+      <div class="form-group">
+        <label for="threshold">Lender Risk Threshold (Public Input):</label>
+        <div class="slider-container">
+          <input type="range" id="threshold" min="500" max="800" step="50" value="700">
+          <div class="score-value" id="thresholdVal">700</div>
+        </div>
+      </div>
+
+      <!-- HTLC Lock Visualizer Card -->
+      <div class="htlc-panel">
+        <div class="htlc-title">
+          <span>ILP HTLC LOCK ENVELOPE</span>
+          <span id="htlcStatus" style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 1rem; background-color: rgba(245, 158, 11, 0.1);">LOCKED</span>
+        </div>
+        <div class="htlc-data">
+          <div><span class="htlc-highlight">Hash Lock (H):</span> <span id="htlcHash">0x0000000000000000...</span></div>
+          <div style="margin-top: 0.25rem;"><span class="htlc-highlight">Preimage (S):</span> <span id="htlcPreimage">Secret Hidden...</span></div>
+        </div>
+      </div>
+
+      <button class="btn" id="runBtn">
+        <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        Trigger ZK-ILP Transaction
+      </button>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Roots verified</div>
+          <div class="stat-value">2 Ledgers</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Scalar Field</div>
+          <div class="stat-value">BN254</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Tree Depth</div>
+          <div class="stat-value">4 Layers</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Hash Permutation</div>
+          <div class="stat-value">Poseidon</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Audit Logs and Tree Visualizer -->
+    <div class="card terminal-card">
+      <div class="card-title">
+        <span>Compliance Audit Console</span>
+        <button id="clearBtn" style="background: none; border: none; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; text-decoration: underline;">Clear</button>
+      </div>
+
+      <div class="terminal" id="term">
+        <div class="term-line"><span class="term-time">[SYSTEM]</span> <span class="term-info">Muungano Compliance Gateway Dashboard Initialized. Ready for compliance verification.</span></div>
+      </div>
+
+      <div class="card-title">
+        <span>Mock Ledger Tree Explorer (Active Paths)</span>
+      </div>
+
+      <div class="tree-container">
+        <div class="tree-title">
+          <div>Mobile Money Ledger Tree</div>
+          <div>Bank Ledger Tree</div>
+        </div>
+        
+        <svg id="treeSvg" width="100%" height="200" viewBox="0 0 400 200">
+          <!-- ======================================= -->
+          <!-- TREE 1 (Left Side: x-center = 100)      -->
+          <!-- ======================================= -->
+          <!-- Links -->
+          <line class="link" id="t1_l4_0" x1="40" y1="180" x2="55" y2="135" />
+          <line class="link" id="t1_l4_1" x1="70" y1="180" x2="55" y2="135" />
+          <line class="link" id="t1_l4_2" x1="100" y1="180" x2="115" y2="135" />
+          <line class="link" id="t1_l4_3" x1="130" y1="180" x2="115" y2="135" />
+          
+          <line class="link" id="t1_l3_0" x1="55" y1="135" x2="85" y2="85" />
+          <line class="link" id="t1_l3_1" x1="115" y1="135" x2="85" y2="85" />
+          <line class="link" id="t1_l3_2" x1="145" y1="135" x2="165" y2="85" />
+          
+          <line class="link" id="t1_l2_0" x1="85" y1="85" x2="125" y2="30" />
+          <line class="link" id="t1_l2_1" x1="165" y1="85" x2="125" y2="30" />
+
+          <!-- Nodes -->
+          <circle class="node leaf" id="t1_n_leaf" cx="40" cy="180" r="7" />
+          <circle class="node" id="t1_n_sibling" cx="70" cy="180" r="6" />
+          <circle class="node" cx="100" cy="180" r="5" />
+          <circle class="node" cx="130" cy="180" r="5" />
+          
+          <circle class="node" id="t1_n3_0" cx="55" cy="135" r="7" />
+          <circle class="node" cx="115" cy="135" r="5" />
+          <circle class="node" cx="145" cy="135" r="5" />
+          
+          <circle class="node" id="t1_n2_0" cx="85" cy="85" r="8" />
+          <circle class="node" cx="165" cy="85" r="5" />
+          
+          <circle class="node root" id="t1_n_root" cx="125" cy="30" r="10" />
+
+          <!-- Labels -->
+          <text class="node-text" x="125" y="18">Root 1</text>
+
+          <!-- ======================================= -->
+          <!-- TREE 2 (Right Side: x-center = 300)     -->
+          <!-- ======================================= -->
+          <!-- Links -->
+          <line class="link" id="t2_l4_0" x1="235" y1="180" x2="250" y2="135" />
+          <line class="link" id="t2_l4_1" x1="265" y1="180" x2="250" y2="135" />
+          <line class="link" id="t2_l4_2" x1="295" y1="180" x2="310" y2="135" />
+          <line class="link" id="t2_l4_3" x1="325" y1="180" x2="310" y2="135" />
+          
+          <line class="link" id="t2_l3_0" x1="250" y1="135" x2="280" y2="85" />
+          <line class="link" id="t2_l3_1" x1="310" y1="135" x2="280" y2="85" />
+          <line class="link" id="t2_l3_2" x1="340" y1="135" x2="360" y2="85" />
+          
+          <line class="link" id="t2_l2_0" x1="280" y1="85" x2="320" y2="30" />
+          <line class="link" id="t2_l2_1" x1="360" y1="85" x2="320" y2="30" />
+
+          <!-- Nodes -->
+          <circle class="node leaf" id="t2_n_leaf" cx="235" cy="180" r="7" />
+          <circle class="node" id="t2_n_sibling" cx="265" cy="180" r="6" />
+          <circle class="node" cx="295" cy="180" r="5" />
+          <circle class="node" cx="325" cy="180" r="5" />
+          
+          <circle class="node" id="t2_n3_0" cx="250" cy="135" r="7" />
+          <circle class="node" cx="310" cy="135" r="5" />
+          <circle class="node" cx="340" cy="135" r="5" />
+          
+          <circle class="node" id="t2_n2_0" cx="280" cy="85" r="8" />
+          <circle class="node" cx="360" cy="85" r="5" />
+          
+          <circle class="node root" id="t2_n_root" cx="320" cy="30" r="10" />
+
+          <!-- Labels -->
+          <text class="node-text" x="320" y="18">Root 2</text>
+        </svg>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const score1Slider = document.getElementById('score1');
+    const score1Val = document.getElementById('score1Val');
+    const score2Slider = document.getElementById('score2');
+    const score2Val = document.getElementById('score2Val');
+    const scoreTotal = document.getElementById('scoreTotal');
+    const thresholdSlider = document.getElementById('threshold');
+    const thresholdVal = document.getElementById('thresholdVal');
+    const runBtn = document.getElementById('runBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const term = document.getElementById('term');
+
+    const htlcStatus = document.getElementById('htlcStatus');
+    const htlcHash = document.getElementById('htlcHash');
+    const htlcPreimage = document.getElementById('htlcPreimage');
+
+    function updateScores() {
+      const s1 = parseInt(score1Slider.value);
+      const s2 = parseInt(score2Slider.value);
+      score1Val.textContent = s1;
+      score2Val.textContent = s2;
+      
+      const total = s1 + s2;
+      scoreTotal.textContent = total;
+      if (total >= parseInt(thresholdSlider.value)) {
+        scoreTotal.style.color = "var(--success)";
+      } else {
+        scoreTotal.style.color = "var(--error)";
+      }
+    }
+
+    score1Slider.addEventListener('input', updateScores);
+    score2Slider.addEventListener('input', updateScores);
+    thresholdSlider.addEventListener('input', (e) => {
+      thresholdVal.textContent = e.target.value;
+      updateScores();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      term.innerHTML = '<div class="term-line"><span class="term-time">[SYSTEM]</span> <span class="term-info">Console cleared.</span></div>';
+      resetTreeHighlight();
+      resetHtlcDisplay();
+    });
+
+    function log(text, type = 'info') {
+      const line = document.createElement('div');
+      line.className = 'term-line';
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'term-time';
+      timeSpan.textContent = `[${new Date().toLocaleTimeString()}]`;
+      
+      const contentSpan = document.createElement('span');
+      contentSpan.className = `term-${type}`;
+      contentSpan.textContent = text;
+      
+      line.appendChild(timeSpan);
+      line.appendChild(contentSpan);
+      term.appendChild(line);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function resetTreeHighlight() {
+      document.querySelectorAll('.node, .link').forEach(el => {
+        el.classList.remove('active');
+      });
+    }
+
+    function resetHtlcDisplay() {
+      htlcStatus.textContent = "LOCKED";
+      htlcStatus.style.backgroundColor = "rgba(245, 158, 11, 0.1)";
+      htlcStatus.style.color = "var(--warning)";
+      htlcHash.textContent = "0x0000000000000000...";
+      htlcPreimage.textContent = "Secret Hidden...";
+    }
+
+    function highlightActivePath() {
+      resetTreeHighlight();
+      
+      // Highlight Tree 1 climb
+      document.getElementById('t1_n_leaf').classList.add('active');
+      document.getElementById('t1_n_sibling').classList.add('active');
+      document.getElementById('t1_n3_0').classList.add('active');
+      document.getElementById('t1_n2_0').classList.add('active');
+      document.getElementById('t1_n_root').classList.add('active');
+      document.getElementById('t1_l4_0').classList.add('active');
+      document.getElementById('t1_l4_1').classList.add('active');
+      document.getElementById('t1_l3_0').classList.add('active');
+      document.getElementById('t1_l2_0').classList.add('active');
+
+      // Highlight Tree 2 climb
+      document.getElementById('t2_n_leaf').classList.add('active');
+      document.getElementById('t2_n_sibling').classList.add('active');
+      document.getElementById('t2_n3_0').classList.add('active');
+      document.getElementById('t2_n2_0').classList.add('active');
+      document.getElementById('t2_n_root').classList.add('active');
+      document.getElementById('t2_l4_0').classList.add('active');
+      document.getElementById('t2_l4_1').classList.add('active');
+      document.getElementById('t2_l3_0').classList.add('active');
+      document.getElementById('t2_l2_0').classList.add('active');
+    }
+
+    runBtn.addEventListener('click', async () => {
+      const s1 = parseInt(score1Slider.value);
+      const s2 = parseInt(score2Slider.value);
+      const threshold = parseInt(thresholdSlider.value);
+      runBtn.disabled = true;
+      resetHtlcDisplay();
+
+      log(`[Open Payments]: Requesting quote from lender...`);
+      try {
+        const quoteRes = await fetch('/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: 150, borrowerId: 'borrower-web' })
+        });
+        
+        const quote = await quoteRes.json();
+        const challenge = quoteRes.headers.get('X-Muungano-Challenge');
+
+        log(`[Quote Received]: URL=${quote.id}`, 'success');
+        log(`[HTLC Lock]: Lender locked payment with Hash Lock (H): ${quote.executionCondition.substring(0, 16)}...`, 'warning');
+
+        htlcHash.textContent = `0x${quote.executionCondition}`;
+        htlcPreimage.textContent = "Secret locked on ledger...";
+
+        // Step 2: Proving Phase
+        log(`[Client]: Intercepting Challenge. Generating aggregate ZK proof for 2 ledgers...`);
+        log(`[Prover]: Feeding Witnesses: MM_Score=${s1}, Bank_Score=${s2}, Identity=12345`);
+        log(`[Prover]: Feeding Public Inputs: Threshold=${threshold}, HashLock=${quote.executionCondition.substring(0, 16)}...`);
+
+        const proofRes = await fetch('/client/generate-proof', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quoteId: challenge, score_1: s1, score_2: s2 })
+        });
+
+        const proofData = await proofRes.json();
+        if (!proofData.success) {
+          log(`[Prover Error]: ZK proof generation failed: aggregate score ${s1+s2} is below ${threshold}!`, 'error');
+          log(`[Outcome]: Compliance check failed. Transaction aborted.`, 'error');
+          runBtn.disabled = false;
+          return;
+        }
+
+        log(`[Prover Success]: ZK proof for both trees generated successfully.`, 'success');
+        highlightActivePath();
+
+        // Step 3 & 4: ILP Prepare
+        log(`[ILP Transport]: Packaging ZK proof into ILP Prepare Header...`);
+        log(`[ILP Gateway]: Intercepting packet. Verifying ZK proof against public ledger roots...`);
+
+        const ilpRes = await fetch('/ilp/prepare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: "150",
+            destination: "peer.lender",
+            executionCondition: quote.executionCondition,
+            customHeaders: {
+              "X-Muungano-Proof": proofData.proof
+            }
+          })
+        });
+
+        const ilpResult = await ilpRes.json();
+        
+        if (ilpRes.ok) {
+          log(`[ILP Gateway]: ZK proof valid. Forwarding packet to destination.`, 'success');
+          log(`[ILP Fulfill]: Lender revealed preimage (S) to release funds: ${ilpResult.fulfillment.substring(0, 16)}...`, 'success');
+          
+          htlcStatus.textContent = "FULFILLED";
+          htlcStatus.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
+          htlcStatus.style.color = "var(--success)";
+          htlcPreimage.textContent = `0x${ilpResult.fulfillment}`;
+
+          log(`[ILP Gateway Receipt]: ${ilpResult.receipt}`, 'success');
+          log(`[Outcome]: Settlement Cleared. Funds Released atomically.`, 'success');
+        } else {
+          log(`[ILP Gateway]: Rejecting packet. Compliance verification failed.`, 'error');
+          log(`[ILP Gateway Reject]: ${ilpResult.reason}`, 'error');
+          log(`[Outcome]: Settlement Denied. Preimage secret remains locked.`, 'error');
+        }
+      } catch (err) {
+        log(`[Error]: Execution failed: ${err.message}`, 'error');
+      }
+
+      runBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>

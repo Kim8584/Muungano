@@ -85,9 +85,13 @@ version = "0.1.0"
 dependencies = [
  "halo2-base",
  "halo2-ecc",
+ "num-bigint",
  "rand",
  "rand_chacha",
  "rand_core",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
