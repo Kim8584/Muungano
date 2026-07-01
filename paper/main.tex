@@ -5,16 +5,32 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{url}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
 \usepackage{draftwatermark}
 \SetWatermarkText{CONFIDENTIAL DRAFT}
 \SetWatermarkScale{2.2}
 \SetWatermarkAngle{45}
-\SetWatermarkColor[gray]{0.88}
+\SetWatermarkColor[gray]{0.92}
 
-\title{Mandazi: Atomic Data Settlement via PLONKish-Proved ElGamal over Interledger}
-\author{Kimani\\
-Mungano\\
-\texttt{sknjorogeus2026@usiu.ac.ke}}
+\title{\textbf{Muungano: Decentralized Zero-Knowledge Information Signaling over Interledger and Open Payments}}
+
+\author{
+  Thomas Mbaru \\ \texttt{tmbaru@usiu.ac.ke}
+  \and
+  Betelhem Getachew Kebede \\ \texttt{kebede.betelhem16@gmail.com}
+  \and
+  Miles Maveke Kioko \\ \texttt{mkioko1@usiu.ac.ke}
+  \and
+  Snit Kahsay Teshome \\ \texttt{skteshome@usiu.ac.ke}
+  \and
+  Joseph Mumo \\ \texttt{jmumo3@usiu.ac.ke}
+  \and
+  Stephen Kimani Njoroge \\ \texttt{sknjorogeus2026@usiu.ac.ke}
+  \and
+  \small{Muungano Infrastructure Group}
+}
 \date{}
 
 \begin{document}
@@ -22,154 +38,83 @@ Mungano\\
 \maketitle
 
 \begin{abstract}
-Zero-Knowledge Contingent Payment (ZKCP) protocols, originally introduced by Maxwell~\cite{maxwell2016zkcp}, enable the fair exchange of digital assets and financial liquidity without relying on a trusted third party. However, deploying general-purpose ZKCP mechanisms over modern Open Payments routing architectures introduces a fundamental performance mismatch: high-throughput payment settlement networks dictate the use of signature schemes over non-native fields (e.g., Ed25519 over $\mathbb{F}_{2^{255}-19}$ via the GNAP protocol~\cite{gnap2024}), whereas efficient zero-knowledge proving systems typically utilize distinct scalar fields (e.g., BN254 or BLS12-381) to minimize constraint density.
-In this paper, we introduce \textbf{Mandazi}, an atomic, dual-curve cryptographic framework that unlocks private, per-query data settlement directly over existing Interledger Protocol (ILP)~\cite{ilp2017} and Rafiki routing structures. Mandazi resolves the cross-curve impedance bottleneck by implementing a lane-isolated architecture. The underlying protocol isolates the Ed25519 financial routing layer out-of-circuit, while simultaneously binding the data validation and delivery mechanics within a monolithic circuit.
-Our arithmetization utilizes a PLONKish system~\cite{plonk2019} optimized via custom gates and lookup tables to verify a Poseidon-based Merkle membership proof of an authoritative data registry leaf. Concurrently, the circuit enforces an integrated ElGamal-style asymmetric key exchange over an embedded Baby Jubjub twisted Edwards curve, producing a deterministic pseudo-random keystream that encrypts the target data payload. Crucially, the circuit architecture imposes absolute witness cell-binding between the authenticated data registry state and the ciphertext generation layer, precluding malicious data substitution by the seller.
-Finally, the framework cryptographically locks the generated ciphertext against a SHA256-hashed commitment of the ephemeral key exchange point, exposing it directly to the ILP conditional routing rails. We provide a full reference implementation utilizing \texttt{halo2-lib} over the BN254 field, demonstrating that Mandazi achieves highly succinct proving times and constant-time verification suitable for trustless, production-grade decentralized data marketplaces.
+Millions of individuals and micro-, small-, and medium-sized enterprises (MSMEs) across Africa remain underserved by formal lenders despite their active, high-volume participation in the digital economy. While mobile money transactions, digital wallet logs, and merchant payment activities offer deep behavioral insights into real-time cash flows and financial stability, this valuable data remains fragmented across siloed ledger systems, prone to selective disclosure fraud, or locked behind centralized data honeypots.
+
+In this paper, we introduce \textbf{Muungano}, an open, decentralized financial trust infrastructure built natively on the Interledger Protocol (ILP) and the Open Payments architecture. Muungano transforms isolated, multi-provider transactional events into a trusted, highly portable, and sovereign financial reputation layer. By leveraging the Grant Negotiation and Authorization Protocol (GNAP) to securely bridge and verify authoritative ledger domains via Web-standard Wallet Addresses, the protocol shifts the verification burden entirely client-side.
+
+We implement a lightweight, parameterizable Poseidon-based Sparse Merkle Tree (SMT) circuit utilizing PLONKish arithmetization over the BN254 scalar field. When a lender issues a financial risk query tied to an Open Payments \text{Quote}, the consumer's local device acts as a prover---mathematically demonstrating that their aggregate financial standing meets or exceeds the necessary credit risk thresholds without revealing their underlying transaction history or private identifiers. Because the resulting zero-knowledge range proofs are highly compressed, the entire cryptographic payload easily fits within standard network Maximum Transmission Unit (MTU) boundaries, guaranteeing sub-millisecond, out-of-band verification at the ILP routing layer.
+
+By replacing expensive, manual document auditing and centralized registries with an instantaneous, privacy-preserving cryptographic conversation, Muungano provides a robust, scalable, and secure engineering foundation for the next generation of credit-extended open banking across emerging payment ecosystems.
 \end{abstract}
 
+\textbf{Keywords:} PLONKish Arithmetization, Interledger, Open Payments, Zero-Knowledge Proofs, Mobile Money, GNAP, Financial Inclusion.
+
 \newpage
 
-\section{Preliminaries \& Mathematical Foundations}
-The Mandazi framework coordinates state verification and stream privacy by embedding cryptographic primitives directly within the native scalar field of the BN254 elliptic curve, denoted as $\mathbb{F}_r$, where:
-\[ r = 21888242871839275222246405745257275088548364400416034343698204186575808495617 \]
+\section{The ILP Transport Bottleneck: Nature of STREAM vs. ZK Proofs}
+The Interledger Protocol (ILP) stack leverages the \textbf{STREAM} transport protocol to execute high-throughput packetized micro-payments. STREAM operates by dividing a transactional request into a continuous flow of small, independent packet frames. Each STREAM packet is structurally bounded by strict network Maximum Transmission Unit (MTU) constraints---typically limited to $1500$ bytes to prevent packet fragmentation, transmission retries, and latency spikes across multi-hop routing paths.
 
-\subsection{The Embedded Baby Jubjub Curve}
-To completely bypass costly non-native field math inside the arithmetic circuits, all asymmetric cryptographic operations are executed over the Baby Jubjub curve. Baby Jubjub is a twisted Edwards curve birationally equivalent to a Montgomery curve, defined natively over the base field $\mathbb{F}_r$ using standard parameter structures~\cite{babyjubjub2019} by the algebraic relation:
-\[ ax^2 + y^2 = 1 + dx^2y^2 \]
-where the curve coefficients are configured as the elements:
-\[ a = 168700, \quad d = 168696 \]
-Let $G = (x_G, y_G)$ denote the fixed base generator point of prime order $l$, where:
-\[ l = 2736030358979909402780800718157159386076813972158567259200215660948447373041 \]
-A public key $PK$ is generated via scalar multiplication of a localized private key scalar $sk \in \mathbb{F}_l$ such that $PK = sk \cdot G$.
-
-\subsection{Poseidon Duplex Sponge Permutation}
-For hash-based commitments, Merkle routing, and symmetric stream encryption, Mandazi utilizes the algebraic Poseidon permutation function optimized for circuit constraint scaling~\cite{poseidon2021}. The internal state matrix $\mathbf{S}$ consists of $t$ field elements representing the capacity $c$ and rate $R_{\text{rate}}$ lines:
-\[ \mathbf{S} = [s_0, s_1, \dots, s_{t-1}]^T \in \mathbb{F}_r^t \]
-The state transition function executes $R_F = 8$ full rounds and $R_P = 57$ partial rounds. Each round applies a non-linear S-box substitution layer $f(x) = x^5$, an affine Matrix multiplication using an MDS matrix $\mathbf{M} \in \mathbb{F}_r^{t \times t}$, and round-constant additions $\mathbf{C}$:
-\[ \mathbf{S}_{j+1} = \mathbf{M} \cdot \mathbf{S}_j^5 + \mathbf{C}_j \]
-In a Duplex Sponge configuration, data elements are absorbed sequentially into the state rate cells, and a pseudo-random keystream is squeezed out to drive the encryption matrix:
-\[ K_i = \text{Poseidon.\text{squeeze}}(\mathbf{S}) \]
-
-\section{The Mandazi Circuit Architecture \& Relations}
-The core technical contribution of the Mandazi circuit layout is the explicit containment of data validation and key derivation within a singular, unified PLONKish execution trace, compiling the full constraint system inside a PLONKish system matrix~\cite{plonk2019}.
-
-\subsection{Monolithic Cell-Binding Semantics}
-To prevent an anonymous seller from executing a data-substitution attack (e.g., providing a valid Merkle path for an authentic registry leaf but encrypting dummy or corrupted data), Mandazi implements strict \textbf{in-circuit cell-binding}.
-In a PLONKish arithmetization grid consisting of advice columns $\mathbf{A}$, fixed columns $\mathbf{F}$, and selector columns $\mathbf{q}$, a single, continuous witness allocation cell index $w_{\text{leaf}}$ is instantiated. The circuit structure forces an absolute equality constraint by routing $w_{\text{leaf}}$ concurrently as the leaf input to the Merkle lookup argument chips and the additive cipher gate:
-\begin{table}[h]
-    \centering
-    \small
-    \caption{PLONK Execution Trace Matrix}
-    \begin{tabular}{llll}
-        \toprule
-        \textbf{Advice A} & \textbf{Advice B} & \textbf{Selector q} & \textbf{Enforced Constraint} \\
-        \midrule
-        $w_{\text{leaf}}$ & $\pi_{\text{sibling}}$ & $q_{\text{hash}}$ & $\text{Poseidon}(w_{\text{leaf}}, \pi_i) = \text{Node}$ \quad (Merkle Inclusion) \\
-        $w_{\text{leaf}}$ & $K_i$ & $q_{\text{add}}$ & $w_{\text{leaf}} + K_i - \text{Cipher}_i = 0$ \quad (Stream Encryption) \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-This structural configuration ensures that if the prover attempts to mutate the data payload to be encrypted, the copy constraint ($w_{\text{leaf}} \equiv M_i$) breaks the permutation argument of the global circuit, instantly rendering the ZK proof invalid.
-
-\subsection{Formal Gate Relations}
-The system layout compiles the full witness trace by simultaneously constraining five discrete mathematical identities:
+Conversely, Zero-Knowledge succinct proofs (such as SNARK proofs) generated over cryptographic curves represent significant serialization overhead. Even highly optimized proofs can occupy several kilobytes. Attempting to inject ZK proofs directly into the standard STREAM packet headers creates a severe performance impedance mismatch:
 \begin{enumerate}
-    \item \textbf{Ephemeral Key Commitment:} The circuit ingests a private ephemeral scalar $r \in \mathbb{F}_l$ and constrains its multiplication against the base generator point $G$ to match the public input point $C_1$:
-    \[ C_1 = (x_{C_1}, y_{C_1}) = r \cdot G \]
-
-    \item \textbf{Diffie-Hellman Shared Secret Derivation:} Using the buyer's public key $PK_{\text{buyer}}$, the circuit computes the shared secret coordinate point $S$:
-    \[ S = (x_S, y_S) = r \cdot PK_{\text{buyer}} \]
-
-    \item \textbf{Merkle Inclusion Proof:} The circuit ingests the private dataset leaf witness $w_{\text{leaf}}$ along with its authentication path vector $\vec{\pi}$, asserting its membership against the public root $R$:
-    \[ \mathcal{H}_n = \text{Poseidon}(\mathcal{H}_{n-1}, \pi_n) \implies \mathcal{H}_{\text{top}} - R = 0 \]
-
-    \item \textbf{Duplex Stream Encryption:} The coordinates $(x_S, y_S)$ initialize the internal Poseidon rate elements. The circuit enforces that the public ciphertext array $Cipher_i$ corresponds directly to the verified witness cell $w_{\text{leaf}}$:
-    \[ K_i = \text{Poseidon}(x_S, y_S, i) \]
-    \[ Cipher_i - w_{\text{leaf}} - K_i \equiv 0 \pmod r \]
-
-    \item \textbf{Interledger Point-Lock Integration:} To bridge the algebraic curve math to the out-of-circuit Rafiki payment engine, the circuit bit-decomposes the public coordinates of $C_1$ and asserts that its SHA-256 hash matches the public escrow routing condition $H_{\text{lock}}$:
-    \[ \text{SHA256}(\text{Serialize}(x_{C_1}, y_{C_1})) == H_{\text{lock}} \]
+    \item \textbf{Fragmentation Overhead:} A proof payload exceeding the network MTU limits forces the IP layer to fragment packets, causing intermediate routing connectors to experience high memory consumption and latency.
+    \item \textbf{High Settlement Latency:} Streaming payment connectors require sub-millisecond execution loops. Verifying mathematical proof constraints on every micro-packet routing decision renders stream settlement slow and cost-prohibitive.
 \end{enumerate}
 
-\subsection{Security Rationale: Why Each Constraint Exists}
-Each identity in the gate relation set functions as a cryptographic lock against a specific adversarial maneuver. Remove even one constraint, and the trustless marketplace collapses. The following breakdown maps every hoop to the exact security flaw it cures.
+To resolve this mismatch, Muungano departs from in-stream packet verification. Instead, we introduce a separation of concerns: routing layers execute lightweight financial transfers, while cryptographic verification is shifted \textbf{out-of-band} to the API authorization layer.
 
-\paragraph{Hoop 1: Ephemeral Key Commitment ($C_1 = r \cdot G$).}
-\textbf{Why jump through it:} The seller must commit to a specific, unique session coordinate before any data moves.
-\textbf{The attack it cures:} \emph{Preventative identity theft and session replay.} Without binding $r$ directly to a hard elliptic curve point ($C_1$) natively inside the trace, the seller could reuse old keys or switch out session parameters mid-computation, causing proof verification to desynchronize from the actual encryption stream.
+\section{Pre-Payment Signaling: The GNAP Authorization Handshake}
+Rather than verification during active packet streaming, Muungano executes the ZK handshake out-of-band during the payment authorization phase using the \textbf{Grant Negotiation and Authorization Protocol (GNAP)}. GNAP is highly flexible, allowing client wallets to negotiate access tokens by presenting customized cryptographic assertions. 
 
-\paragraph{Hoop 2: Diffie-Hellman Shared Secret Derivation ($S = r \cdot PK_{\text{buyer}}$).}
-\textbf{Why jump through it:} The circuit derives a secure symmetric key that \emph{only} the designated buyer can reconstruct out-of-circuit.
-\textbf{The attack it cures:} \textbf{The Interception / Eavesdropping Attack.} If payload encryption relied on a public variable readable from the ledger, routing intermediaries could steal the data. Diffie-Hellman lets intermediate nodes route payments blindly while the buyer retains exclusive decryption rights.
+The signaling protocol utilizes the standard Open Payments challenge structure. When a borrower requests a credit line quote, the lender's wallet generates an Open Payments \textbf{Quote Resource} and returns it with a custom challenge header:
+\[ \texttt{X-Muungano-Challenge: <Quote\_ID>} \]
+Additionally, the lender generates a Hash Time-Lock Contract (HTLC) lock condition:
+\[ H = \text{SHA256}(S) \]
+where $S$ is a private, random 32-byte preimage (the secret promise) generated by the lender. The lock $H$ binds the payment to this specific quote request.
 
-\paragraph{Hoop 3: Merkle Inclusion Proof ($\mathcal{H}_{\text{top}} - R = 0$).}
-\textbf{Why jump through it:} The sold data must be legitimate and registered in an authoritative system (e.g., a valid KYC registry or CRB list).
-\textbf{The attack it cures:} \textbf{The ``Snake Oil'' or Garbage Data Attack.} An anonymous seller could encrypt fabricated data, generate a valid encryption proof, and steal the buyer's payment. This hoop forces provenance verification against a trusted root $R$ before a single byte is encrypted.
+The client wallet intercepts this challenge, aggregates credit scores from connected ledgers (e.g., M-Pesa and local bank balances), and generates a ZK proof. Instead of attaching this proof to subsequent STREAM packets, the client submits the proof to the lender's GNAP endpoint. Once verified, the lender authorizes the transaction and releases the secret preimage $S$, allowing the payment to settle atomically.
 
-\paragraph{Hoop 4: Duplex Stream Encryption ($\text{Cipher}_i - w_{\text{leaf}} - K_i \equiv 0$).}
-\textbf{Why jump through it:} The verified registry data cell is bound directly into the encryption gate.
-\textbf{The attack it cures:} \textbf{The Bait-and-Switch Attack.} This is the core of Mandazi. Without routing the \emph{exact same} witness cell ($w_{\text{leaf}}$) through both the Merkle path and the cipher gate, a seller could prove a valid KYC leaf while encrypting an entirely different payload. This constraint forces encryption of the \emph{exact} asset that was proven.
+\newpage
 
-\paragraph{Hoop 5: Interledger Point-Lock Integration ($\text{SHA256}(C_1) = H_{\text{lock}}$).}
-\textbf{Why jump through it:} Algebraic curve coordinates are translated into a standard hash-link that existing web-payment infrastructure (Rafiki, Interledger conditional rails) can enforce natively.
-\textbf{The attack it cures:} \textbf{The Delivery-vs-Payment Failure.} Escrowed funds are locked to the data release. To withdraw via an Interledger connector or automated M-Pesa push, the seller must reveal $C_1$ to routing nodes. The moment $C_1$ appears on the wire, the buyer intercepts it, computes $S$, and unlocks the data stream.
+\section{Mathematical Foundations \& PLONKish Arithmetization}
+Muungano represents ledger relationships and constraints within a PLONKish arithmetization grid over the BN254 scalar field $\mathbb{F}_r$, where:
+\[ r = 21888242871839275222246405745257275088548364400416034343698204186575808495617 \]
 
-\begin{quote}
-\textit{``We jump through these hoops to achieve \textbf{Atomic Trustlessness}. Hoops~1 and~2 lock down \emph{data privacy} for the buyer; Hoop~3 locks down \emph{data authenticity} from the registry; Hoop~4 enforces \emph{witness binding} so the seller cannot switch the data out; and Hoop~5 ties the entire cryptographic engine directly into the \emph{Interledger financial payment rails} for atomic clearance.''}
-\end{quote}
+\subsection{PLONKish Execution Matrix}
+The constraint layout utilizes advice columns $\mathbf{A}$, fixed columns $\mathbf{F}$, and selector columns $\mathbf{q}$. Range checks and inequality constraints are optimized using UltraPLONK-style lookup tables. To prove that the borrower's credit score meets the threshold without revealing the scores, we enforce the gate relation:
+\[ q_{\text{range}} \cdot (S_{\text{total}} - S_1 - S_2) = 0 \]
+where $S_1$ and $S_2$ are private score witnesses from independent ledgers. We then verify:
+\[ T < S_{\text{total}} + 1 \]
+using a lookup table to assert that the difference fits within 34 bits, preventing overflow attacks.
 
-\subsection{Execution and Atomic Settlement Flow}
-The transaction lifecycle progresses across five sequential phases, routing asset constraints natively over Open Payments environments via GNAP requirements~\cite{gnap2024} and Interledger engines~\cite{ilp2017}:
-\begin{figure}[h]
+\subsection{Poseidon Merkle Membership Structure}
+To verify the authenticity of the scores $S_1$ and $S_2$ without exposing identity, we compute membership paths within two independent parameterizable $d$-depth SMT registries (configured as $d=4$ for our experimental prototype; e.g., Tree 1 for Mobile Money, Tree 2 for Bank). The circuit decomposes the indices into direction bits $b_i$:
+\[ b_i \in \{0, 1\} \implies \text{direction\_bits} = \text{num\_to\_bits}(\text{index}, d) \]
+and climbs to the respective public roots $R_1$ and $R_2$ utilizing the Poseidon duplex sponge. Crucially, both tree climbs share the same identity witness $W_{\text{identity}}$, forcing cross-ledger identity binding.
+
+The complete parallel validation flow, active sibling climbers, and the corresponding copy constraints are illustrated in Figure~\ref{fig:academic_merkle}.
+
+\begin{figure}[H]
     \centering
-    \small
-    \begin{tabular}{rcc}
-        \toprule
-        \textbf{Phase} & \textbf{Action} & \textbf{Cryptographic Payload} \\
-        \midrule
-        1 & Handshake & Buyer transmits $PK_{\text{buyer}}$ to Seller \\
-        2 & Proving & Seller compiles circuit $\mathcal{R}$ and generates Proof $\pi$ \\
-        3 & Delivery & Seller sends $\{\pi, C_1, Cipher_i, H_{\text{lock}}\}$ to Buyer \\
-        4 & Verification & Buyer validates $\pi$ against $R$ and locks funds to $H_{\text{lock}}$ via Rafiki \\
-        5 & Settlement & Seller claims funds via Rafiki by revealing $C_1 \implies$ Buyer decrypts stream \\
-        \bottomrule
-    \end{tabular}
-    \caption{The Mandazi Protocol Execution Flow}
+    \includegraphics[width=0.75\textwidth]{../resources/academic_merkle.jpg}
+    \caption{Muungano Multi-Ledger SMT Circuit Architecture and Constraints.}
+    \label{fig:academic_merkle}
 \end{figure}
-During Phase 5, the seller triggers an automated M-Pesa Express STK Push or Interledger contract settlement by revealing the preimage point $C_1$ to the network routing connectors to withdraw the escrowed funds.
-Because the Interledger plane only observes the hash-link relation $H_{\text{lock}} = \text{SHA256}(C_1)$, intermediate nodes gain zero advantage in interpreting the data stream. The buyer intercepts $C_1$ off the wire, executes a localized, out-of-circuit ECDH scalar multiplication using their private key $sk_{\text{buyer}}$ to derive $S = sk_{\text{buyer}} \cdot C_1$, initializes the matching Poseidon sponge, and successfully decrypts the plaintext registry feed $M_i = Cipher_i - K_i$.
 
-\newpage
+\section{The Muungano Protocol Execution Flow}
+The complete end-to-end cryptographic signaling loop is structured as follows:
+\begin{enumerate}
+    \item \textbf{Quote \& Lock Request:} The client requests a credit quote. The lender generates a secret preimage $S$, computes the lock $H = \text{SHA256}(S)$, and returns the quote challenge containing $H$.
+    \item \textbf{ZKIP Local Proving:} The client app aggregates private scores $S_1, S_2$, builds the proof $\pi$ bound to the public inputs $(R_1, R_2, T, H)$, and returns it via GNAP.
+    \item \textbf{Out-of-Band Verification:} The gateway verifies $\pi$. If valid, it forwards the payment packet locked with $H$.
+    \item \textbf{Atomic Settlement:} The lender reveals the secret preimage $S$ to unlock and settle the transaction.
+\end{enumerate}
 
-\section{Conclusion \& Future Horizon}
-Mandazi presents a novel paradigm for decentralized data commerce, successfully bridging the architectural chasm between Web-standard financial routing primitives operating on $\text{Ed25519}$ and high-performance zero-knowledge execution environments operating over the $\text{BN254}$ field. By establishing a strict, dual-curve lane-isolated protocol boundaries and enforcing monolithic, in-circuit atomic witness cell-binding, the framework entirely mitigates counterparty fraud and data-mutation vectors without imposing the prohibitive overhead of non-native field simulation.
-What Mandazi fundamentally unlocks is the tokenization of authenticated trust over existing open payment infrastructure. For the first time, highly sensitive identity layers---such as real-time Know-Your-Customer (KYC) statuses, Credit Reference Bureau (CRB) standing, or sovereign compliance state assertions---can be trustlessly streamlined and monetized on a per-query basis over standard Interledger (ILP) routing nodes and digital rails like Rafiki or automated mobile money API loops.
-By guaranteeing that data privacy is structurally tethered to atomic financial settlement via a Diffie-Hellman point-lock escrow, Mandazi obsoletes the need for centralized, vulnerable data honeypots. This architecture clears a concrete engineering path toward a highly scalable, sovereign, and privacy-preserving global data marketplace, laying the mathematical foundation for the next generation of trustless open-banking API protocols.
+\section{Conclusion \& Market Incentives}
+Muungano introduces a paradigm shift in financial verification by moving the computing burden entirely client-side. Under this architecture, the zero-knowledge proof ($\pi$) is compiled locally on the borrower's mobile device (phone) using sandboxed ledger API connections. Consequently, raw financial data---such as individual transaction histories, bank balances, credit reference records, or private identifiers---never leaves the local storage boundary of the user's device. Neither the lender nor the Muungano signaling gateway ever interacts with, transfers, or stores any raw customer records.
 
-\newpage
+This localized proving process fundamentally eliminates the "data honeypot" problem. Traditional credit reference registries represent highly lucrative targets for exploitation; by decentralizing proof generation to the edge, the system reduces the target vector to zero. Furthermore, this design aligns the commercial incentives of traditional banks, telecom providers, and credit registries: instead of acting as centralized database curators, they act as cryptographic state publishers. Financial institutions monetize their roles by selling signed Merkle state roots (needed to compile proofs) directly to consumers. This model preserves consumer privacy, eliminates data liability, and unlocks new query-based revenue channels for ledger providers, building a resilient foundation for global, privacy-preserving credit routing.
 
-\section{References}
 \begin{thebibliography}{9}
-
-\bibitem{maxwell2016zkcp}
-G.~Maxwell.
-\newblock The first successful Zero-Knowledge Contingent Payment.
-\newblock {\em Bitcoin Core Research}, February 2016.
-\newblock \url{https://bitcoincore.org/en/2016/02/26/zero-knowledge-contingent-payments-announcement/}.
-
-\bibitem{poseidon2021}
-L.~Grassi, D.~Khovratovich, C.~Rechberger, A.~Roy, and M.~Schofnegger.
-\newblock Poseidon: A New Hash Function for Zero-Knowledge Proof Systems.
-\newblock In {\em Proceedings of the 2021 USENIX Open Security Symposium}, pages 254--271, 2021.
-\newblock IACR Cryptology ePrint Archive: Report 2019/458.
-
-\bibitem{babyjubjub2019}
-M.~Dolfing, J.~Baylina, and M.~Bellés.
-\newblock Baby Jubjub Elliptic Curve Specification.
-\newblock {\em iden3 Technical Research Document}, October 2019.
-\newblock \url{https://docs.iden3.io/publications/pdfs/Baby-Jubjub.pdf}.
-
 \bibitem{plonk2019}
 A.~Gabizon, Z.~Williamson, and O.~Ciobotaru.
 \newblock PLONK: Permutations over Lagrange-bases for Oecumenical Non-interactive arguments of Knowledge.
@@ -184,7 +129,6 @@ S.~Thomas and E.~Schwartz.
 J.~Richer and Y.~Atkins.
 \newblock Grant Negotiation and Authorization Protocol (GNAP).
 \newblock {\em IETF RFC 9635}, 2024.
-
 \end{thebibliography}
 
 \end{document}
