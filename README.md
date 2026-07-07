@@ -6,6 +6,20 @@ It enables underserved individuals and MSMEs across emerging markets to prove th
 
 ---
 
+## 📄 The White Paper
+
+<p align="center">
+  <a href="https://github.com/Kim8584/Muungano/blob/main/paper/main.pdf">
+    <img src="https://img.shields.io/badge/The%20White%20Paper-PDF%20Viewer-blue?style=for-the-badge&logo=read-the-docs&logoColor=white" alt="The White Paper" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/Kim8584/Muungano/raw/main/paper/main.pdf">
+    <img src="https://img.shields.io/badge/Download%20Paper-Direct%20Download-green?style=for-the-badge&logo=gitbook&logoColor=white" alt="Download Paper" />
+  </a>
+</p>
+
+---
+
 ## 🛠️ The Architecture
 
 ```
@@ -86,13 +100,7 @@ npm run demo
 
 ---
 
-## 👥 Authors
-*   **Thomas Mbaru** (tmbaru@usiu.ac.ke)
-*   **Betelhem Getachew Kebede** (kebede.betelhem16@gmail.com)
-*   **Miles Maveke Kioko** (mkioko1@usiu.ac.ke)
-*   **Snit Kahsay Teshome** (skteshome@usiu.ac.ke)
-*   **Joseph Mumo** (jmumo3@usiu.ac.ke)
+## 👥 Author
 *   **Stephen Kimani Njoroge** (sknjorogeus2026@usiu.ac.ke)
-*   **Emmanuel Kaiga** (ekkibienda@usiu.ac.ke)
 
-*Under the Muungano Explorations Research Group.*
+*USIU -Africa.*
