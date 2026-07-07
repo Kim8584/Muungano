@@ -1,6 +1,6 @@
 # Muungano V2: Decentralized ZK-Information Signaling over Interledger and Open Payments
 
-**Muungano** (Swahili for *Union/Connection*) is a decentralized, privacy-preserving financial reputation and trust infrastructure built natively on the Interledger Protocol (ILP) and Open Payments architecture. 
+[**Muungano**](https://github.com/Kim8584/Muungano/blob/main/paper/main.pdf) (Swahili for *Union/Connection*) is a decentralized, privacy-preserving financial reputation and trust infrastructure built natively on the Interledger Protocol (ILP) and Open Payments architecture. 
 
 It enables underserved individuals and MSMEs across emerging markets to prove their creditworthiness across fragmented, siloed transactional ledgers (e.g., Mobile Money and Bank logs) using a single, succinct Zero-Knowledge proof compiled locally on their phone. Lenders and gateways gain absolute mathematical certainty of creditworthiness without ever seeing or storing the borrower's raw transaction records, completely eliminating centralized data honeypots.
 
